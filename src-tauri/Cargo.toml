@@ -1,0 +1,21 @@
+[package]
+name = "swipe2clean"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "swipe2clean_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+walkdir = "2"
+trash = "5"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp", "ico"] }
+base64 = "0.22"

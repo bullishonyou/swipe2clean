@@ -1,0 +1,161 @@
+import { useState, useEffect } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
+import { motion } from "framer-motion";
+import { scanDirectory, loadState, saveState } from "../lib/commands";
+import type { FileEntry } from "../lib/types";
+
+interface Props {
+  onStart: (files: FileEntry[]) => void;
+}
+
+export function SelectionView({ onStart }: Props) {
+  const [folder, setFolder] = useState<string | null>(null);
+  const [recursive, setRecursive] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Restore last session's folder on mount
+  useEffect(() => {
+    loadState()
+      .then((state) => {
+        if (state.last_folder) setFolder(state.last_folder);
+        setRecursive(state.recursive);
+      })
+      .catch(() => {
+        /* no saved state — use defaults */
+      });
+  }, []);
+
+  const handlePickFolder = async () => {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: "Choose a folder to clean",
+    });
+    if (selected) {
+      setFolder(selected as string);
+      setError(null);
+    }
+  };
+
+  const handleStart = async () => {
+    if (!folder) return;
+    setScanning(true);
+    setError(null);
+
+    try {
+      await saveState({ last_folder: folder, recursive });
+      const files = await scanDirectory(folder, recursive);
+
+      if (files.length === 0) {
+        setError("No files found in this folder.");
+        setScanning(false);
+        return;
+      }
+
+      onStart(files);
+    } catch (e) {
+      setError(String(e));
+      setScanning(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="w-full max-w-md space-y-8"
+      >
+        {/* Title */}
+        <div className="text-center">
+          <h1 className="text-4xl font-bold tracking-tight">swipe2clean</h1>
+          <p className="mt-2 text-neutral-500 dark:text-neutral-400">
+            Clean your files, one swipe at a time
+          </p>
+        </div>
+
+        {/* Folder picker */}
+        <button
+          onClick={handlePickFolder}
+          disabled={scanning}
+          className="w-full px-6 py-5 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {folder ? (
+            <div className="space-y-1">
+              <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                Selected Folder
+              </span>
+              <p className="text-sm font-mono truncate">{folder}</p>
+            </div>
+          ) : (
+            <div className="text-center space-y-1">
+              <p className="font-medium">Choose a Folder</p>
+              <p className="text-sm text-neutral-400 dark:text-neutral-500">
+                Click to browse...
+              </p>
+            </div>
+          )}
+        </button>
+
+        {/* Recursive toggle */}
+        <label className="flex items-center gap-3 cursor-pointer select-none">
+          <div className="relative inline-flex items-center">
+            <input
+              type="checkbox"
+              checked={recursive}
+              onChange={(e) => setRecursive(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-10 h-6 bg-neutral-200 dark:bg-neutral-700 rounded-full peer-checked:bg-neutral-900 dark:peer-checked:bg-neutral-100 transition-colors" />
+            <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white dark:bg-neutral-900 rounded-full shadow-sm peer-checked:translate-x-4 transition-transform" />
+          </div>
+          <span className="text-sm">Include subfolders</span>
+        </label>
+
+        {/* Start button */}
+        <button
+          onClick={handleStart}
+          disabled={!folder || scanning}
+          className="w-full py-3.5 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          {scanning ? (
+            <span className="inline-flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+              Scanning...
+            </span>
+          ) : (
+            "Start Cleaning"
+          )}
+        </button>
+
+        {/* Error message */}
+        {error && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-sm text-red-500 dark:text-red-400 text-center"
+          >
+            {error}
+          </motion.p>
+        )}
+      </motion.div>
+    </div>
+  );
+}
