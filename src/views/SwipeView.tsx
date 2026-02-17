@@ -72,9 +72,9 @@ export function SwipeView({ files, onFinish }: Props) {
     cardRef.current?.completeSwipe("left");
   }, []);
 
-  const handleUndo = useCallback(async () => {
+  const handleUndo = useCallback(() => {
     setShowUndo(false);
-    await queue.undo();
+    queue.undo();
   }, [queue]);
 
   const handleOpen = useCallback(async () => {

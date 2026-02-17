@@ -25,11 +25,6 @@ fn trash_files(paths: Vec<String>) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn restore_from_trash(original_path: String) -> Result<(), String> {
-    trash_manager::restore(&original_path)
-}
-
-#[tauri::command]
 fn open_in_viewer(path: String) -> Result<(), String> {
     trash_manager::open_file(&path)
 }
@@ -56,7 +51,6 @@ pub fn run() {
             scan_directory,
             get_file_preview,
             trash_files,
-            restore_from_trash,
             open_in_viewer,
             load_state,
             save_state,

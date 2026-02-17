@@ -16,10 +16,6 @@ export async function trashFiles(paths: string[]): Promise<void> {
   return invoke("trash_files", { paths });
 }
 
-export async function restoreFromTrash(originalPath: string): Promise<void> {
-  return invoke("restore_from_trash", { originalPath });
-}
-
 export async function openInViewer(path: string): Promise<void> {
   return invoke("open_in_viewer", { path });
 }

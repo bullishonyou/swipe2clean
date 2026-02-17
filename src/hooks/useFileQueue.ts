@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { trashFiles, restoreFromTrash } from "../lib/commands";
+import { trashFiles } from "../lib/commands";
 import type { FileEntry, SessionStats } from "../lib/types";
 import { BATCH_SIZE } from "../lib/utils";
 
@@ -8,7 +8,6 @@ export type SwipeDirection = "left" | "right";
 interface UndoEntry {
   file: FileEntry;
   index: number;
-  flushed: boolean;
 }
 
 export interface UseFileQueueReturn {
@@ -18,7 +17,7 @@ export interface UseFileQueueReturn {
   remaining: number;
   stats: SessionStats;
   swipe: (direction: SwipeDirection) => void;
-  undo: () => Promise<void>;
+  undo: () => void;
   flush: () => Promise<void>;
   canUndo: boolean;
 }
@@ -60,13 +59,8 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
 
     try {
       await trashFiles(paths);
-      // Mark any pending undo entry as flushed
-      setLastTrashed((prev) => {
-        if (prev && paths.includes(prev.file.path)) {
-          return { ...prev, flushed: true };
-        }
-        return prev;
-      });
+      // Once flushed to OS trash, undo is no longer possible — dismiss the toast
+      setLastTrashed(null);
     } catch (err) {
       console.error("Failed to trash files:", err);
     }
@@ -83,7 +77,7 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
 
       if (direction === "left") {
         trashBuffer.current.push(file.path);
-        setLastTrashed({ file, index: currentIndex, flushed: false });
+        setLastTrashed({ file, index: currentIndex });
         setStats((prev) => ({
           reviewed: prev.reviewed + 1,
           trashed: prev.trashed + 1,
@@ -109,14 +103,7 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
         if (paths.length > 0) {
           trashBuffer.current = [];
           trashFiles(paths)
-            .then(() => {
-              setLastTrashed((prev) => {
-                if (prev && paths.includes(prev.file.path)) {
-                  return { ...prev, flushed: true };
-                }
-                return prev;
-              });
-            })
+            .then(() => setLastTrashed(null))
             .catch((err) => console.error("Auto-flush failed:", err));
         }
       }
@@ -128,22 +115,14 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
   // Undo last trash action
   // ------------------------------------------------------------------
 
-  const undo = useCallback(async () => {
+  const undo = useCallback(() => {
     if (!lastTrashed) return;
-    const { file, index, flushed } = lastTrashed;
+    const { file, index } = lastTrashed;
 
-    if (flushed) {
-      try {
-        await restoreFromTrash(file.path);
-      } catch (err) {
-        console.error("Failed to restore from trash:", err);
-        return;
-      }
-    } else {
-      trashBuffer.current = trashBuffer.current.filter(
-        (p) => p !== file.path,
-      );
-    }
+    // Remove the file from the in-memory buffer (only works pre-flush)
+    trashBuffer.current = trashBuffer.current.filter(
+      (p) => p !== file.path,
+    );
 
     setCurrentIndex(index);
     setStats((prev) => ({
