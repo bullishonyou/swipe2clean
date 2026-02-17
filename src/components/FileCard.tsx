@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { FilePreview } from "./FilePreview";
 import { getFilePreview } from "../lib/commands";
-import { formatBytes, timeAgo, LARGE_FILE_THRESHOLD } from "../lib/utils";
+import { formatBytes, timeAgo } from "../lib/utils";
 import type { FileEntry, PreviewData } from "../lib/types";
 
 interface Props {
   file: FileEntry;
+  largeFileThreshold: number;
 }
 
-export function FileCard({ file }: Props) {
+export function FileCard({ file, largeFileThreshold }: Props) {
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -33,7 +34,7 @@ export function FileCard({ file }: Props) {
     };
   }, [file.path]);
 
-  const isLargeFile = file.size > LARGE_FILE_THRESHOLD;
+  const isLargeFile = file.size > largeFileThreshold;
 
   return (
     <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">

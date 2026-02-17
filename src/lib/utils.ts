@@ -30,8 +30,8 @@ export function timeAgo(timestamp: number): string {
   return "just now";
 }
 
-/** Files larger than this threshold trigger a confirmation modal. */
-export const LARGE_FILE_THRESHOLD = 500 * 1024 * 1024; // 500 MB
+/** Default large-file warning threshold in megabytes. */
+export const DEFAULT_LARGE_FILE_THRESHOLD_MB = 500;
 
 /** Number of swipes between automatic buffer flushes. */
 export const BATCH_SIZE = 10;

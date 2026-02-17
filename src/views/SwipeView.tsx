@@ -7,14 +7,14 @@ import { useFileQueue } from "../hooks/useFileQueue";
 import { useSwipe } from "../hooks/useSwipe";
 import { openInViewer } from "../lib/commands";
 import type { FileEntry, SessionStats } from "../lib/types";
-import { LARGE_FILE_THRESHOLD } from "../lib/utils";
 
 interface Props {
   files: FileEntry[];
   onFinish: (stats: SessionStats) => void;
+  largeFileThreshold: number;
 }
 
-export function SwipeView({ files, onFinish }: Props) {
+export function SwipeView({ files, onFinish, largeFileThreshold }: Props) {
   const queue = useFileQueue(files);
   const cardRef = useRef<CardStackHandle>(null);
   const [showUndo, setShowUndo] = useState(false);
@@ -39,7 +39,7 @@ export function SwipeView({ files, onFinish }: Props) {
   }, [queue.isComplete, queue.flush, onFinish]);
 
   const isCurrentLargeFile = queue.currentFile
-    ? queue.currentFile.size > LARGE_FILE_THRESHOLD
+    ? queue.currentFile.size > largeFileThreshold
     : false;
 
   // ------------------------------------------------------------------
@@ -149,6 +149,7 @@ export function SwipeView({ files, onFinish }: Props) {
             currentFile={queue.currentFile}
             nextFile={queue.nextFile}
             isLargeFile={isCurrentLargeFile}
+            largeFileThreshold={largeFileThreshold}
             onSwipeIntent={handleSwipeIntent}
             onSwipeComplete={handleSwipeComplete}
           />

@@ -25,13 +25,14 @@ interface Props {
   currentFile: FileEntry;
   nextFile: FileEntry | null;
   isLargeFile: boolean;
+  largeFileThreshold: number;
   onSwipeIntent: (direction: "left" | "right") => void;
   onSwipeComplete: (direction: "left" | "right") => void;
 }
 
 export const CardStack = forwardRef<CardStackHandle, Props>(
   function CardStack(
-    { currentFile, nextFile, isLargeFile, onSwipeIntent, onSwipeComplete },
+    { currentFile, nextFile, isLargeFile, largeFileThreshold, onSwipeIntent, onSwipeComplete },
     ref,
   ) {
     const [isAnimating, setIsAnimating] = useState(false);
@@ -99,7 +100,7 @@ export const CardStack = forwardRef<CardStackHandle, Props>(
         {nextFile && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-full scale-[0.95] opacity-50">
-              <FileCard file={nextFile} />
+              <FileCard file={nextFile} largeFileThreshold={largeFileThreshold} />
             </div>
           </div>
         )}
@@ -131,7 +132,7 @@ export const CardStack = forwardRef<CardStackHandle, Props>(
             </span>
           </motion.div>
 
-          <FileCard file={currentFile} />
+          <FileCard file={currentFile} largeFileThreshold={largeFileThreshold} />
         </motion.div>
       </div>
     );

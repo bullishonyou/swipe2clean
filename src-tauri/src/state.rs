@@ -11,6 +11,13 @@ use tauri::Manager;
 pub struct AppState {
     pub last_folder: Option<String>,
     pub recursive: bool,
+    /// Large-file warning threshold in megabytes. Defaults to 500 MB.
+    #[serde(default = "default_large_file_threshold_mb")]
+    pub large_file_threshold_mb: u32,
+}
+
+fn default_large_file_threshold_mb() -> u32 {
+    500
 }
 
 impl Default for AppState {
@@ -18,6 +25,7 @@ impl Default for AppState {
         Self {
             last_folder: None,
             recursive: false,
+            large_file_threshold_mb: default_large_file_threshold_mb(),
         }
     }
 }
