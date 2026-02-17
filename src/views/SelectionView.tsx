@@ -7,10 +7,9 @@ import type { FileEntry } from "../lib/types";
 interface Props {
   onStart: (files: FileEntry[]) => void;
   onOpenSettings: () => void;
-  largeFileThresholdMb: number;
 }
 
-export function SelectionView({ onStart, onOpenSettings, largeFileThresholdMb }: Props) {
+export function SelectionView({ onStart, onOpenSettings }: Props) {
   const [folder, setFolder] = useState<string | null>(null);
   const [recursive, setRecursive] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -46,7 +45,8 @@ export function SelectionView({ onStart, onOpenSettings, largeFileThresholdMb }:
     setError(null);
 
     try {
-      await saveState({ last_folder: folder, recursive, large_file_threshold_mb: largeFileThresholdMb });
+      const current = await loadState();
+      await saveState({ ...current, last_folder: folder, recursive });
       const files = await scanDirectory(folder, recursive);
 
       if (files.length === 0) {

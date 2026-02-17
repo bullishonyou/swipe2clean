@@ -4,8 +4,9 @@ import { SwipeView } from "./views/SwipeView";
 import { SummaryView } from "./views/SummaryView";
 import { SettingsView } from "./views/SettingsView";
 import { loadState, saveState } from "./lib/commands";
-import type { FileEntry, SessionStats } from "./lib/types";
+import type { FileEntry, SessionStats, Theme } from "./lib/types";
 import { DEFAULT_LARGE_FILE_THRESHOLD_MB } from "./lib/utils";
+import { useTheme } from "./hooks/useTheme";
 
 type View = "selection" | "review" | "summary" | "settings";
 
@@ -15,6 +16,8 @@ export function App() {
   const [largeFileThresholdMb, setLargeFileThresholdMb] = useState(
     DEFAULT_LARGE_FILE_THRESHOLD_MB,
   );
+  const [theme, setTheme] = useState<Theme>("system");
+  const [themePreview, setThemePreview] = useState<Theme | null>(null);
   const [stats, setStats] = useState<SessionStats>({
     reviewed: 0,
     trashed: 0,
@@ -22,11 +25,15 @@ export function App() {
     spaceReclaimed: 0,
   });
 
+  // Apply the theme to the DOM — preview overrides saved when active
+  useTheme(themePreview ?? theme);
+
   // Load persisted settings on mount
   useEffect(() => {
     loadState()
       .then((state) => {
         setLargeFileThresholdMb(state.large_file_threshold_mb);
+        setTheme((state.theme as Theme) || "system");
       })
       .catch(() => {
         /* use defaults */
@@ -50,13 +57,18 @@ export function App() {
   }, []);
 
   const handleSaveSettings = useCallback(
-    (thresholdMb: number) => {
+    (thresholdMb: number, newTheme: Theme) => {
       setLargeFileThresholdMb(thresholdMb);
-      // Persist — we load folder/recursive separately in SelectionView,
-      // so re-load current state to avoid overwriting those fields.
+      setTheme(newTheme);
+      setThemePreview(null);
+      // Persist — re-load current state to avoid overwriting folder/recursive.
       loadState()
         .then((current) =>
-          saveState({ ...current, large_file_threshold_mb: thresholdMb }),
+          saveState({
+            ...current,
+            large_file_threshold_mb: thresholdMb,
+            theme: newTheme,
+          }),
         )
         .catch(() => {
           /* best-effort persist */
@@ -66,6 +78,11 @@ export function App() {
     [],
   );
 
+  const handleBackFromSettings = useCallback(() => {
+    setThemePreview(null);
+    setView("selection");
+  }, []);
+
   const largeFileThreshold = largeFileThresholdMb * 1024 * 1024;
 
   return (
@@ -74,7 +91,6 @@ export function App() {
         <SelectionView
           onStart={handleStart}
           onOpenSettings={() => setView("settings")}
-          largeFileThresholdMb={largeFileThresholdMb}
         />
       )}
       {view === "review" && (
@@ -90,8 +106,10 @@ export function App() {
       {view === "settings" && (
         <SettingsView
           largeFileThresholdMb={largeFileThresholdMb}
+          theme={theme}
           onSave={handleSaveSettings}
-          onBack={() => setView("selection")}
+          onBack={handleBackFromSettings}
+          onPreviewTheme={setThemePreview}
         />
       )}
     </div>

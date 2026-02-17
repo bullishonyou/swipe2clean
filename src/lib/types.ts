@@ -23,9 +23,13 @@ export interface SessionStats {
   spaceReclaimed: number; // bytes
 }
 
+export type Theme = "system" | "light" | "dark";
+
 export interface AppState {
   last_folder: string | null;
   recursive: boolean;
   /** Large-file warning threshold in megabytes. */
   large_file_threshold_mb: number;
+  /** Theme preference. */
+  theme: Theme;
 }

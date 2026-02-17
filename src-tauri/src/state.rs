@@ -14,10 +14,17 @@ pub struct AppState {
     /// Large-file warning threshold in megabytes. Defaults to 500 MB.
     #[serde(default = "default_large_file_threshold_mb")]
     pub large_file_threshold_mb: u32,
+    /// Theme preference: "system", "light", or "dark". Defaults to "system".
+    #[serde(default = "default_theme")]
+    pub theme: String,
 }
 
 fn default_large_file_threshold_mb() -> u32 {
     500
+}
+
+fn default_theme() -> String {
+    "system".to_string()
 }
 
 impl Default for AppState {
@@ -26,6 +33,7 @@ impl Default for AppState {
             last_folder: None,
             recursive: false,
             large_file_threshold_mb: default_large_file_threshold_mb(),
+            theme: default_theme(),
         }
     }
 }

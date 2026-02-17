@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Use class-based dark mode so we can toggle it programmatically. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
