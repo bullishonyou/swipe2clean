@@ -108,7 +108,7 @@ export function SelectionView({ onStart, onOpenSettings }: Props) {
         <button
           onClick={handlePickFolder}
           disabled={scanning}
-          className="w-full px-6 py-5 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-6 py-5 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {folder ? (
             <div className="space-y-1">

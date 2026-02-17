@@ -14,6 +14,7 @@ pub enum FileKind {
     Image,
     Video,
     Text,
+    Document,
     Binary,
 }
 
@@ -52,6 +53,8 @@ const TEXT_EXTENSIONS: &[&str] = &[
     "vue", "svelte", "astro",
 ];
 
+const DOCUMENT_EXTENSIONS: &[&str] = &["pdf"];
+
 // ---------------------------------------------------------------------------
 // Public helpers
 // ---------------------------------------------------------------------------
@@ -65,6 +68,8 @@ pub fn classify_file(ext: &str) -> FileKind {
         FileKind::Video
     } else if TEXT_EXTENSIONS.contains(&lower.as_str()) {
         FileKind::Text
+    } else if DOCUMENT_EXTENSIONS.contains(&lower.as_str()) {
+        FileKind::Document
     } else {
         FileKind::Binary
     }

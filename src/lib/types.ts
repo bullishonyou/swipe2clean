@@ -1,4 +1,4 @@
-export type FileKind = "image" | "video" | "text" | "binary";
+export type FileKind = "image" | "video" | "text" | "document" | "binary";
 
 export interface FileEntry {
   path: string;

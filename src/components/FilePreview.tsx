@@ -21,7 +21,7 @@ export function FilePreview({ file, preview, isLoading }: Props) {
     case "image":
       return preview.content ? (
         <img
-          src={`data:image/png;base64,${preview.content}`}
+          src={`data:image/jpeg;base64,${preview.content}`}
           alt={file.name}
           className="max-h-52 max-w-full object-contain rounded-lg mx-auto"
           draggable={false}
@@ -35,6 +35,18 @@ export function FilePreview({ file, preview, isLoading }: Props) {
         <pre className="selectable w-full text-xs font-mono leading-relaxed bg-neutral-100 dark:bg-neutral-800 p-3 rounded-lg overflow-hidden max-h-52 text-neutral-700 dark:text-neutral-300">
           {preview.content || "(empty file)"}
         </pre>
+      );
+
+    case "document":
+      return preview.content ? (
+        <img
+          src={`data:image/png;base64,${preview.content}`}
+          alt={file.name}
+          className="max-h-52 max-w-full object-contain rounded-lg mx-auto shadow-sm"
+          draggable={false}
+        />
+      ) : (
+        <GenericIcon extension={file.extension} label="Document" />
       );
 
     case "video":
