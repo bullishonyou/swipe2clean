@@ -1,39 +1,15 @@
-import { useState, useEffect } from "react";
 import { FilePreview } from "./FilePreview";
-import { getFilePreview } from "../lib/commands";
 import { formatBytes, timeAgo } from "../lib/utils";
 import type { FileEntry, PreviewData } from "../lib/types";
 
 interface Props {
   file: FileEntry;
+  preview: PreviewData | null;
+  isLoading: boolean;
   largeFileThreshold: number;
 }
 
-export function FileCard({ file, largeFileThreshold }: Props) {
-  const [preview, setPreview] = useState<PreviewData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    setPreview(null);
-
-    getFilePreview(file.path)
-      .then((data) => {
-        if (!cancelled) setPreview(data);
-      })
-      .catch(() => {
-        if (!cancelled) setPreview(null);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [file.path]);
-
+export function FileCard({ file, preview, isLoading, largeFileThreshold }: Props) {
   const isLargeFile = file.size > largeFileThreshold;
 
   return (

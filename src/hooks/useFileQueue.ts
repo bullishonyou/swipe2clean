@@ -10,6 +10,7 @@ interface PendingTrash {
 }
 
 export interface UseFileQueueReturn {
+  currentIndex: number;
   currentFile: FileEntry | null;
   nextFile: FileEntry | null;
   isComplete: boolean;
@@ -134,6 +135,7 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
   }, []);
 
   return {
+    currentIndex,
     currentFile,
     nextFile,
     isComplete,

@@ -4,6 +4,7 @@ import { CardStack, type CardStackHandle } from "../components/CardStack";
 import { UndoToast } from "../components/UndoToast";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { useFileQueue } from "../hooks/useFileQueue";
+import { usePreviewCache } from "../hooks/usePreviewCache";
 import { useSwipe } from "../hooks/useSwipe";
 import { openInViewer } from "../lib/commands";
 import type { FileEntry, SessionStats } from "../lib/types";
@@ -16,6 +17,7 @@ interface Props {
 
 export function SwipeView({ files, onFinish, largeFileThreshold }: Props) {
   const queue = useFileQueue(files);
+  const previewCache = usePreviewCache(files, queue.currentIndex);
   const cardRef = useRef<CardStackHandle>(null);
   const [showUndo, setShowUndo] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -143,17 +145,27 @@ export function SwipeView({ files, onFinish, largeFileThreshold }: Props) {
 
       {/* Card stack */}
       <div className="flex-1 flex items-center justify-center w-full max-w-sm my-4">
-        {queue.currentFile && (
-          <CardStack
-            ref={cardRef}
-            currentFile={queue.currentFile}
-            nextFile={queue.nextFile}
-            isLargeFile={isCurrentLargeFile}
-            largeFileThreshold={largeFileThreshold}
-            onSwipeIntent={handleSwipeIntent}
-            onSwipeComplete={handleSwipeComplete}
-          />
-        )}
+        {queue.currentFile && (() => {
+          const cur = previewCache.get(queue.currentFile!.path);
+          const nxt = queue.nextFile
+            ? previewCache.get(queue.nextFile.path)
+            : { data: null, loading: false };
+          return (
+            <CardStack
+              ref={cardRef}
+              currentFile={queue.currentFile!}
+              nextFile={queue.nextFile}
+              currentPreview={cur.data}
+              currentPreviewLoading={cur.loading}
+              nextPreview={nxt.data}
+              nextPreviewLoading={nxt.loading}
+              isLargeFile={isCurrentLargeFile}
+              largeFileThreshold={largeFileThreshold}
+              onSwipeIntent={handleSwipeIntent}
+              onSwipeComplete={handleSwipeComplete}
+            />
+          );
+        })()}
       </div>
 
       {/* Action buttons + hints */}

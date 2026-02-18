@@ -12,7 +12,7 @@ import {
   type PanInfo,
 } from "framer-motion";
 import { FileCard } from "./FileCard";
-import type { FileEntry } from "../lib/types";
+import type { FileEntry, PreviewData } from "../lib/types";
 
 const SWIPE_THRESHOLD = 100;
 const FLY_OFF_DISTANCE = 600;
@@ -24,6 +24,10 @@ export interface CardStackHandle {
 interface Props {
   currentFile: FileEntry;
   nextFile: FileEntry | null;
+  currentPreview: PreviewData | null;
+  currentPreviewLoading: boolean;
+  nextPreview: PreviewData | null;
+  nextPreviewLoading: boolean;
   isLargeFile: boolean;
   largeFileThreshold: number;
   onSwipeIntent: (direction: "left" | "right") => void;
@@ -32,7 +36,18 @@ interface Props {
 
 export const CardStack = forwardRef<CardStackHandle, Props>(
   function CardStack(
-    { currentFile, nextFile, isLargeFile, largeFileThreshold, onSwipeIntent, onSwipeComplete },
+    {
+      currentFile,
+      nextFile,
+      currentPreview,
+      currentPreviewLoading,
+      nextPreview,
+      nextPreviewLoading,
+      isLargeFile,
+      largeFileThreshold,
+      onSwipeIntent,
+      onSwipeComplete,
+    },
     ref,
   ) {
     const [isAnimating, setIsAnimating] = useState(false);
@@ -51,14 +66,17 @@ export const CardStack = forwardRef<CardStackHandle, Props>(
 
         const target = direction === "left" ? -FLY_OFF_DISTANCE : FLY_OFF_DISTANCE;
         animate(x, target, {
-          type: "spring",
-          stiffness: 500,
-          damping: 35,
-          restDelta: 0.5,
+          type: "tween",
+          duration: 0.2,
+          ease: [0.32, 0.72, 0, 1],
         }).then(() => {
-          x.set(0);
-          setIsAnimating(false);
+          // Fire state update first so React prepares the new card content,
+          // then reset position on the next frame to avoid a flash of old content.
           onSwipeComplete(direction);
+          requestAnimationFrame(() => {
+            x.set(0);
+            setIsAnimating(false);
+          });
         });
       },
       [isAnimating, x, onSwipeComplete],
@@ -100,7 +118,7 @@ export const CardStack = forwardRef<CardStackHandle, Props>(
         {nextFile && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-full scale-[0.95] opacity-50">
-              <FileCard file={nextFile} largeFileThreshold={largeFileThreshold} />
+              <FileCard file={nextFile} preview={nextPreview} isLoading={nextPreviewLoading} largeFileThreshold={largeFileThreshold} />
             </div>
           </div>
         )}
@@ -132,7 +150,7 @@ export const CardStack = forwardRef<CardStackHandle, Props>(
             </span>
           </motion.div>
 
-          <FileCard file={currentFile} largeFileThreshold={largeFileThreshold} />
+          <FileCard file={currentFile} preview={currentPreview} isLoading={currentPreviewLoading} largeFileThreshold={largeFileThreshold} />
         </motion.div>
       </div>
     );
