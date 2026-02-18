@@ -32,6 +32,3 @@ export function timeAgo(timestamp: number): string {
 
 /** Default large-file warning threshold in megabytes. */
 export const DEFAULT_LARGE_FILE_THRESHOLD_MB = 500;
-
-/** Number of swipes between automatic buffer flushes. */
-export const BATCH_SIZE = 10;

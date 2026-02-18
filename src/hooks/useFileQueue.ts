@@ -1,11 +1,10 @@
 import { useState, useCallback, useRef } from "react";
 import { trashFiles } from "../lib/commands";
 import type { FileEntry, SessionStats } from "../lib/types";
-import { BATCH_SIZE } from "../lib/utils";
 
 export type SwipeDirection = "left" | "right";
 
-interface UndoEntry {
+interface PendingTrash {
   file: FileEntry;
   index: number;
 }
@@ -23,22 +22,23 @@ export interface UseFileQueueReturn {
 }
 
 /**
- * Manages the file review queue, trash buffer, undo stack, and session stats.
+ * Manages the file review queue with a one-file-delayed trash model.
  *
- * Files swiped left accumulate in an in-memory buffer and are moved to the
- * system trash in batches of `BATCH_SIZE` (or when the session ends).
+ * When a file is swiped left it becomes "pending". It only gets sent to the OS
+ * trash when the user swipes the *next* card (in either direction) or the
+ * session ends. This gives the user exactly one card's worth of undo window,
+ * just like Tinder.
  */
 export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const trashBuffer = useRef<string[]>([]);
-  const [lastTrashed, setLastTrashed] = useState<UndoEntry | null>(null);
+  const pending = useRef<PendingTrash | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
   const [stats, setStats] = useState<SessionStats>({
     reviewed: 0,
     trashed: 0,
     kept: 0,
     spaceReclaimed: 0,
   });
-  const swipeCount = useRef(0);
 
   const currentFile =
     currentIndex < files.length ? files[currentIndex] : null;
@@ -48,21 +48,32 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
   const remaining = Math.max(0, files.length - currentIndex);
 
   // ------------------------------------------------------------------
-  // Flush the trash buffer to the OS trash
+  // Commit the pending file to OS trash (fire-and-forget)
+  // ------------------------------------------------------------------
+
+  const commitPending = useCallback(() => {
+    const entry = pending.current;
+    if (!entry) return;
+    pending.current = null;
+    setCanUndo(false);
+    trashFiles([entry.file.path]).catch((err) =>
+      console.error("Failed to trash file:", err),
+    );
+  }, []);
+
+  // ------------------------------------------------------------------
+  // Flush — used at session end to commit any pending file
   // ------------------------------------------------------------------
 
   const flush = useCallback(async () => {
-    const paths = [...trashBuffer.current];
-    if (paths.length === 0) return;
-
-    trashBuffer.current = [];
-
+    const entry = pending.current;
+    if (!entry) return;
+    pending.current = null;
+    setCanUndo(false);
     try {
-      await trashFiles(paths);
-      // Once flushed to OS trash, undo is no longer possible — dismiss the toast
-      setLastTrashed(null);
+      await trashFiles([entry.file.path]);
     } catch (err) {
-      console.error("Failed to trash files:", err);
+      console.error("Failed to trash file:", err);
     }
   }, []);
 
@@ -73,11 +84,15 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
   const swipe = useCallback(
     (direction: SwipeDirection) => {
       if (currentIndex >= files.length) return;
+
+      // Commit the previously pending file before processing this swipe
+      commitPending();
+
       const file = files[currentIndex];
 
       if (direction === "left") {
-        trashBuffer.current.push(file.path);
-        setLastTrashed({ file, index: currentIndex });
+        pending.current = { file, index: currentIndex };
+        setCanUndo(true);
         setStats((prev) => ({
           reviewed: prev.reviewed + 1,
           trashed: prev.trashed + 1,
@@ -85,7 +100,7 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
           spaceReclaimed: prev.spaceReclaimed + file.size,
         }));
       } else {
-        setLastTrashed(null);
+        setCanUndo(false);
         setStats((prev) => ({
           reviewed: prev.reviewed + 1,
           trashed: prev.trashed,
@@ -95,44 +110,28 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
       }
 
       setCurrentIndex((prev) => prev + 1);
-      swipeCount.current++;
-
-      // Auto-flush every BATCH_SIZE swipes
-      if (swipeCount.current % BATCH_SIZE === 0) {
-        const paths = [...trashBuffer.current];
-        if (paths.length > 0) {
-          trashBuffer.current = [];
-          trashFiles(paths)
-            .then(() => setLastTrashed(null))
-            .catch((err) => console.error("Auto-flush failed:", err));
-        }
-      }
     },
-    [currentIndex, files],
+    [currentIndex, files, commitPending],
   );
 
   // ------------------------------------------------------------------
-  // Undo last trash action
+  // Undo — rescue the pending file before it gets committed
   // ------------------------------------------------------------------
 
   const undo = useCallback(() => {
-    if (!lastTrashed) return;
-    const { file, index } = lastTrashed;
+    const entry = pending.current;
+    if (!entry) return;
 
-    // Remove the file from the in-memory buffer (only works pre-flush)
-    trashBuffer.current = trashBuffer.current.filter(
-      (p) => p !== file.path,
-    );
-
-    setCurrentIndex(index);
+    pending.current = null;
+    setCanUndo(false);
+    setCurrentIndex(entry.index);
     setStats((prev) => ({
       reviewed: prev.reviewed - 1,
       trashed: prev.trashed - 1,
       kept: prev.kept,
-      spaceReclaimed: prev.spaceReclaimed - file.size,
+      spaceReclaimed: prev.spaceReclaimed - entry.file.size,
     }));
-    setLastTrashed(null);
-  }, [lastTrashed]);
+  }, []);
 
   return {
     currentFile,
@@ -143,6 +142,6 @@ export function useFileQueue(files: FileEntry[]): UseFileQueueReturn {
     swipe,
     undo,
     flush,
-    canUndo: lastTrashed !== null,
+    canUndo,
   };
 }
